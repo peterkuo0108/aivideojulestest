@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Video Generator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>API Settings</h2>
+            <div class="api-setting">
+                <label for="ai-service">AI Service:</label>
+                <select id="ai-service">
+                    <option value="ollama">Ollama</option>
+                    <option value="gemini">Gemini</option>
+                    <option value="openai">OpenAI</option>
+                </select>
+            </div>
+            <div id="ollama-settings" class="api-settings-group">
+                <label for="ollama-base-url">Ollama Base URL:</label>
+                <input type="text" id="ollama-base-url" placeholder="http://localhost:11434">
+                <label for="ollama-model">Model Name:</label>
+                <input type="text" id="ollama-model" placeholder="llama2">
+            </div>
+            <div id="gemini-settings" class="api-settings-group" style="display: none;">
+                <label for="gemini-api-key">Gemini API Key:</label>
+                <input type="text" id="gemini-api-key" placeholder="Enter your Gemini API Key">
+            </div>
+            <div id="openai-settings" class="api-settings-group" style="display: none;">
+                <label for="openai-api-key">OpenAI API Key:</label>
+                <input type="text" id="openai-api-key" placeholder="Enter your OpenAI API Key">
+            </div>
+            <div class="api-setting">
+                <label for="pexels-api-key">Pexels API Key:</label>
+                <input type="text" id="pexels-api-key" placeholder="Enter your Pexels API Key">
+            </div>
+            <button id="save-settings">Save</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>AI Video Generator</h1>
+        <form id="video-form">
+            <div class="form-group">
+                <label for="topic">Video Topic:</label>
+                <input type="text" id="topic" required>
+            </div>
+            <div class="form-group">
+                <label for="length">Video Length (minutes):</label>
+                <input type="number" id="length" min="1" value="1" required>
+            </div>
+            <div class="form-group">
+                <label for="aspect-ratio">Aspect Ratio:</label>
+                <select id="aspect-ratio">
+                    <option value="short">Short (9:16)</option>
+                    <option value="normal">Normal (16:9)</option>
+                    <option value="square">Square (1:1)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="transition">Transition:</label>
+                <select id="transition">
+                    <option value="fade">Fade</option>
+                    <option value="slide">Slide</option>
+                    <option value="none">None</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="voice">Voice:</label>
+                <select id="voice"></select>
+            </div>
+            <button type="submit">Generate Video</button>
+        </form>
+
+        <div id="progress-container" style="display: none;">
+            <h2>Progress</h2>
+            <div id="progress-bar">
+                <div id="progress-bar-inner"></div>
+            </div>
+            <div id="progress-status"></div>
+            <div id="script-output" class="output-section" style="display: none;">
+                <h3>Generated Script</h3>
+                <pre id="script-text"></pre>
+            </div>
+            <div id="video-output" class="output-section" style="display: none;">
+                <h3>Video Segments</h3>
+                <div id="video-segments"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
