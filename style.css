@@ -1,20 +1,6 @@
-@keyframes background-pan {
-    0% {
-        background-position: 0% 50%;
-    }
-    50% {
-        background-position: 100% 50%;
-    }
-    100% {
-        background-position: 0% 50%;
-    }
-}
-
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(270deg, #0f0c29, #302b63, #24243e);
-    background-size: 600% 600%;
-    animation: background-pan 16s ease infinite;
     color: #ffffff;
     margin: 0;
     padding: 0;

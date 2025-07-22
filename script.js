@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const voiceSelect = document.getElementById('voice');
 
     // Load voices
-    fetch('https://tts-5cmbedesv-peterkuo0108s-projects.vercel.app/api/voices?l=zh&f=1')
+    fetch('voice.txt')
         .then(response => response.json())
         .then(data => {
             data.forEach(voice => {
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load settings from local storage
     function loadSettings() {
         const settings = JSON.parse(localStorage.getItem('apiSettings'));
-        if (settings) {
+        if (settings && settings.pexelsApiKey && (settings.aiService === 'ollama' || settings.geminiApiKey || settings.openaiApiKey)) {
             aiServiceSelect.value = settings.aiService;
             document.getElementById('ollama-base-url').value = settings.ollamaBaseUrl;
             document.getElementById('ollama-model').value = settings.ollamaModel;
@@ -75,18 +75,27 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('openai-api-key').value = settings.openaiApiKey;
             document.getElementById('pexels-api-key').value = settings.pexelsApiKey;
             aiServiceSelect.dispatchEvent(new Event('change'));
+            return true;
         } else {
             openSettingsModal();
+            return false;
         }
     }
 
-    loadSettings();
+    if (!loadSettings()) {
+        saveSettingsButton.addEventListener('click', () => {
+            loadSettings();
+        });
+    }
+
 
     videoForm.addEventListener('submit', (event) => {
         event.preventDefault();
-        progressContainer.style.display = 'block';
-        // Start video generation process
-        generateVideo();
+        if (loadSettings()) {
+            progressContainer.style.display = 'block';
+            // Start video generation process
+            generateVideo();
+        }
     });
 
     function updateProgress(percentage, status) {
@@ -179,14 +188,16 @@ document.addEventListener('DOMContentLoaded', () => {
             body: JSON.stringify({
                 videoUrls,
                 audioUrls,
+                segments,
                 transition: document.getElementById('transition').value,
             }),
         });
 
         const createVideoData = await createVideoResponse.json();
         const finalVideoUrl = createVideoData.videoUrl;
+        const subtitleUrl = createVideoData.subtitleUrl;
 
-        videoSegments.innerHTML += `<div class="video-segment">Final Video: <video src="${finalVideoUrl}" controls></video></div>`;
+        videoSegments.innerHTML += `<div class="video-segment">Final Video: <video src="${finalVideoUrl}" controls></video><a href="${subtitleUrl}" download>Download Subtitles</a></div>`;
 
         updateProgress(100, 'Video generation complete!');
     }

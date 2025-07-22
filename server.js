@@ -99,60 +99,78 @@ function downloadFile(url, dest) {
 }
 
 app.post('/api/create-video', async (req, res) => {
-    const { videoUrls, audioUrls, transition } = req.body;
+    const { videoUrls, audioUrls, segments, transition } = req.body;
     const videoPaths = [];
     const audioPaths = [];
     const segmentPaths = [];
-    const outputFile = `videos/final-${Date.now()}.mp4`;
+    const timestamp = Date.now();
+    const outputFile = `videos/final-${timestamp}.mp4`;
+    const subtitleFile = `videos/final-${timestamp}.srt`;
+
 
     try {
         for (let i = 0; i < videoUrls.length; i++) {
             const videoPath = `videos/video-${i}.mp4`;
             const audioPath = `videos/audio-${i}.mp3`;
             await downloadFile(videoUrls[i], videoPath);
-            await downloadFile(audioUrls[i], audioPath);
+            const audioBlob = await fetch(audioUrls[i]).then(r => r.blob());
+            const audioBuffer = Buffer.from(await audioBlob.arrayBuffer());
+            fs.writeFileSync(audioPath, audioBuffer);
             videoPaths.push(videoPath);
             audioPaths.push(audioPath);
         }
 
+        let totalDuration = 0;
+        let srtContent = '';
         for (let i = 0; i < videoPaths.length; i++) {
             const segmentPath = `videos/segment-${i}.mp4`;
+            const duration = await new Promise((resolve, reject) => {
+                ffmpeg.ffprobe(audioPaths[i], (err, metadata) => {
+                    if (err) reject(err);
+                    resolve(metadata.format.duration);
+                });
+            });
+
             await new Promise((resolve, reject) => {
                 ffmpeg(videoPaths[i])
                     .input(audioPaths[i])
-                    .outputOptions('-c:v copy -c:a aac -strict experimental')
+                    .outputOptions(`-t ${duration}`)
+                    .outputOptions('-c:v libx264 -c:a aac -strict experimental')
                     .on('end', resolve)
                     .on('error', reject)
                     .save(segmentPath);
             });
             segmentPaths.push(segmentPath);
+
+            const startTime = new Date(totalDuration * 1000).toISOString().substr(11, 8) + ',000';
+            totalDuration += duration;
+            const endTime = new Date(totalDuration * 1000).toISOString().substr(11, 8) + ',000';
+            srtContent += `${i + 1}\n${startTime} --> ${endTime}\n${segments[i].script}\n\n`;
         }
+
+        fs.writeFileSync(subtitleFile, srtContent);
 
         const command = ffmpeg();
         segmentPaths.forEach(path => command.input(path));
 
-        let complexFilter = '';
         if (transition === 'fade') {
-            complexFilter = segmentPaths.map((_, i) => `[${i}:v]fade=t=in:st=0:d=1,fade=t=out:st=4:d=1[v${i}]`).join(';');
-            command.complexFilter(complexFilter + 'v0v1v2concat=n=3:v=1:a=0[v]');
+            command.complexFilter('xfade=transition=fade:duration=1:offset=4');
         } else if (transition === 'slide') {
-            // More complex filter for sliding, this is a simplified example
-            complexFilter = segmentPaths.map((_, i) => `[${i}:v]format=pix_fmts=yuva420p,fade=t=in:st=0:d=1,fade=t=out:st=4:d=1[v${i}]`).join(';');
-            command.complexFilter(complexFilter + 'v0v1v2concat=n=3:v=1:a=0[v]');
-        } else {
-            command.mergeToFile(outputFile, 'videos/');
+            command.complexFilter('xfade=transition=slideleft:duration=1:offset=4');
         }
 
         await new Promise((resolve, reject) => {
             command
-                .output(outputFile)
                 .on('end', resolve)
                 .on('error', reject)
-                .run();
+                .mergeToFile(outputFile, 'videos/');
         });
 
 
-        res.json({ videoUrl: `http://localhost:${PORT}/${outputFile}` });
+        res.json({
+            videoUrl: `http://localhost:${PORT}/${outputFile}`,
+            subtitleUrl: `http://localhost:${PORT}/${subtitleFile}`
+        });
 
     } catch (error) {
         console.error(error);
