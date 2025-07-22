@@ -64,10 +64,31 @@ document.addEventListener('DOMContentLoaded', () => {
         closeSettingsModal();
     });
 
+    // Load voices
+    fetch('voice.txt')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Failed to load voice.txt");
+            }
+            return response.json();
+        })
+        .then(data => {
+            data.forEach(voice => {
+                const option = document.createElement('option');
+                option.value = voice.voice;
+                option.textContent = voice.name;
+                voiceSelect.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Error loading voices:', error);
+            alert('Failed to load voice options. Please make sure voice.txt is present and correctly formatted.');
+        });
+
     // Load settings from local storage
     function loadSettings() {
         const settings = JSON.parse(localStorage.getItem('apiSettings'));
-        if (settings && settings.pexelsApiKey && (settings.aiService === 'ollama' || settings.geminiApiKey || settings.openaiApiKey)) {
+        if (settings && settings.pexelsApiKey && (settings.aiService === 'ollama' || (settings.geminiApiKey && settings.aiService === 'gemini') || (settings.openaiApiKey && settings.aiService === 'openai'))) {
             aiServiceSelect.value = settings.aiService;
             document.getElementById('ollama-base-url').value = settings.ollamaBaseUrl;
             document.getElementById('ollama-model').value = settings.ollamaModel;
@@ -76,25 +97,39 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('pexels-api-key').value = settings.pexelsApiKey;
             aiServiceSelect.dispatchEvent(new Event('change'));
             return true;
-        } else {
+        }
+        return false;
+    }
+
+    function checkAndLoadSettings() {
+        if (!loadSettings()) {
             openSettingsModal();
-            return false;
         }
     }
 
-    if (!loadSettings()) {
-        saveSettingsButton.addEventListener('click', () => {
-            loadSettings();
-        });
-    }
+    checkAndLoadSettings();
+
+    saveSettingsButton.addEventListener('click', () => {
+        const settings = {
+            aiService: aiServiceSelect.value,
+            ollamaBaseUrl: document.getElementById('ollama-base-url').value,
+            ollamaModel: document.getElementById('ollama-model').value,
+            geminiApiKey: document.getElementById('gemini-api-key').value,
+            openaiApiKey: document.getElementById('openai-api-key').value,
+            pexelsApiKey: document.getElementById('pexels-api-key').value,
+        };
+        localStorage.setItem('apiSettings', JSON.stringify(settings));
+        closeSettingsModal();
+    });
 
 
     videoForm.addEventListener('submit', (event) => {
         event.preventDefault();
         if (loadSettings()) {
             progressContainer.style.display = 'block';
-            // Start video generation process
             generateVideo();
+        } else {
+            openSettingsModal();
         }
     });
 
